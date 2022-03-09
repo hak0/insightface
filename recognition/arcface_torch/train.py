@@ -49,6 +49,15 @@ def main(args):
         cfg.network, dropout=0.0, fp16=cfg.fp16, num_features=cfg.embedding_size
     ).cuda()
 
+    # Added by lx:
+    # -------- begin ---------
+    # resume model:
+    if cfg.resume is True:
+        path_module = os.path.join(cfg.output, "model.pt")
+        print("backbone resumed!")
+        # 保存的指令是：torch.save(backbone.module.state_dict(), path_module)
+        backbone.load_state_dict(torch.load(path_module))
+    # --------  end  --------
     backbone = torch.nn.parallel.DistributedDataParallel(
         module=backbone, broadcast_buffers=False, device_ids=[args.local_rank])
     backbone.train()
@@ -67,6 +76,14 @@ def main(args):
         cfg.sample_rate, 
         cfg.fp16
     )
+    # Added by lx:
+    # -------- begin --------
+    # resume model:
+    if cfg.resume is True:
+        path_pfc = os.path.join(cfg.output, "softmax_fc_gpu_{}.pt".format(rank))
+        # 保存的指令是：torch.save(module_partial_fc.state_dict(), path_pfc)
+        module_partial_fc.load_state_dict(torch.load(path_pfc))
+    # --------  end  --------
     module_partial_fc.train().cuda()
 
     # TODO the params of partial fc must be last in the params list
@@ -79,6 +96,18 @@ def main(args):
         momentum=0.9,
         weight_decay=cfg.weight_decay
     )
+
+    # Added by lx:
+    # -------- begin --------
+    # read start_epoch ,so that we can resume state for lr scheduler later.
+    start_epoch = 0
+    path_lx_others = os.path.join(cfg.output, "lx_other_info_{}.pth.tar".format(rank))
+    if cfg.resume is True:
+        lx_other_info = torch.load(path_lx_others)
+        start_epoch = lx_other_info['epoch']
+        global_step = lx_other_info['global_step']
+    # --------  end  --------
+
     total_batch_size = cfg.batch_size * world_size
     cfg.warmup_step = cfg.num_image // total_batch_size * cfg.warmup_epoch
     cfg.total_step = cfg.num_image // total_batch_size * cfg.num_epoch
@@ -86,6 +115,13 @@ def main(args):
         optimizer=opt,
         base_lr=cfg.lr,
         max_steps=cfg.total_step,
+        # Added by lx:
+        # -------- begin --------
+        # resume state for lr scheduler
+        # here the last_epoch for lr scheduler is actually last_step.
+        last_epoch = global_step,
+        # --------  end  --------
+
         warmup_steps=cfg.warmup_step
     )
 

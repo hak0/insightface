@@ -7,7 +7,8 @@ from easydict import EasyDict as edict
 config = edict()
 config.loss = "arcface"
 config.network = "mbf"
-config.resume = False
+#config.resume = False
+config.resume = True
 config.output = None
 config.embedding_size = 512
 config.sample_rate = 1.0
@@ -19,7 +20,8 @@ config.lr = 0.2
 config.verbose = 5000
 config.dali = False
 
-config.rec = "/train_tmp/ms1m-retinaface-t1"
+config.rec = "/media/everfine/data/luxiao/ms1m-retinaface-t1"
+#config.rec = "/train_tmp/ms1m-retinaface-t1"
 config.num_classes = 93431
 config.num_image = 5179510
 config.num_epoch = 40
