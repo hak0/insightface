@@ -121,7 +121,6 @@ def main(args):
         # here the last_epoch for lr scheduler is actually last_step.
         last_epoch = global_step,
         # --------  end  --------
-
         warmup_steps=cfg.warmup_step
     )
 
@@ -143,6 +142,21 @@ def main(args):
     start_epoch = 0
     global_step = 0
     amp = torch.cuda.amp.grad_scaler.GradScaler(growth_interval=100)
+
+    # Added by lx:
+    # -------- begin --------
+    # load optimizer params, epoch and other params.
+    path_lx_others = os.path.join(cfg.output, "lx_other_info_{}.pth.tar".format(rank))
+    if cfg.resume is True:
+        lx_other_info = torch.load(path_lx_others)
+        opt.load_state_dict(lx_other_info['optimizer'])
+        start_epoch = lx_other_info['epoch']
+        global_step = lx_other_info['global_step']
+        print("epoch, global_step and optimizer resumed!")
+    # --------  end  --------
+ 
+
+
 
     for epoch in range(start_epoch, cfg.num_epoch):
 
@@ -179,6 +193,13 @@ def main(args):
         if rank == 0:
             path_module = os.path.join(cfg.output, "model.pt")
             torch.save(backbone.module.state_dict(), path_module)
+        
+        # Added by lx:
+        # -------- begin --------
+        # save optimizer params, epoch and other params.
+        path_lx_others = os.path.join(cfg.output, "lx_other_info_{}.pth.tar".format(rank))
+        torch.save({'epoch': epoch, 'global_step': global_step, 'optimizer': opt.state_dict()}, path_lx_others)
+        # --------  end  --------
         
         if cfg.dali:
             train_loader.reset()

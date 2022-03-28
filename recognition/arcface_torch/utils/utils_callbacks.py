@@ -84,9 +84,12 @@ class CallBackLogging(object):
                 except ZeroDivisionError:
                     speed_total = float('inf')
 
-                time_now = (time.time() - self.time_start) / 3600
-                time_total = time_now / ((global_step + 1) / self.total_step)
-                time_for_end = time_total - time_now
+                # deleted by lx
+                #time_now = (time.time() - self.time_start) / 3600
+                #time_total = time_now / ((global_step + 1) / self.total_step)
+                #time_for_end = time_total - time_now
+                # added by lx
+                time_for_end = (self.total_step - global_step) / (speed_total / self.batch_size ) / 3600
                 if self.writer is not None:
                     self.writer.add_scalar('time_for_end', time_for_end, global_step)
                     self.writer.add_scalar('learning_rate', learning_rate, global_step)
